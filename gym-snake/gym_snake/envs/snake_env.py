@@ -2,6 +2,8 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+from gym.envs.classic_control import rendering
+
 
 """
   Description: 
@@ -16,6 +18,7 @@ import numpy as np
 
   Action space / Snake direction:
 
+      Nothing:[0,  0]    
       Up:     [0,  1]    *only if current direction is not Down
       Down:   [0, -1]    *only if current direction is not Up
       Right:  [1,  0]    *only if current direction is not Left
@@ -30,7 +33,7 @@ import numpy as np
 
 	Initial state: 
 
-      15 x 15 grid, snake (head) starts at [5, 4] going right, 
+      N x N grid, snake (head) starts at [5, 4] going right, 
       first apple is at [10, 4]
 
 
@@ -44,11 +47,17 @@ import numpy as np
 
 """
 FPS = 30
-SCREEN_HEIGHT = 2*256
-SCREEN_WIDTH = 2*256
+WINDOW_HEIGHT = 500 
+WINDOW_WIDTH = 500
 
-GRID_HEIGHT = 15
-GRID_WIDTH = 15
+UNIT_HEIGHT = 20
+UNIT_WIDTH = 20
+
+# snake grid is 25 X 25 "units" 500/20 = 25
+GRID_HEIGHT = WINDOW_HEIGHT / UNIT_HEIGHT
+GRID_WIDTH = WINDOW_WIDTH / UNIT_WIDTH
+
+
 
 class SnakeEnv(gym.Env):
   metadata = {
@@ -58,70 +67,98 @@ class SnakeEnv(gym.Env):
 
   def __init__(self):
   
-    self.viewer = None
-    
-    self.snake_occupancy = [[5, 4], [4, 4], [3, 4]]  #[x, y]
-    self.apple_location = [10, 4]  #[x, y]
-    self.direction = 0 # going right
-    self.apples_eaten = 0
+    self.viewer = rendering.Viewer(WINDOW_HEIGHT, WINDOW_WIDTH)
+    self.viewer.window.set_caption('SNAKE')
 
-    self.action_space = spaces.Discrete(4) 
+    self.snake_occupancy = None #[x, y]
+    self.apple_location = None #[x, y]
+    self.direction = None
+
+    self.action_space = spaces.Discrete(5) 
     self.done = False
     self.state = None
-
-    self.img_apple = None
 
 
   def step(self, action):
     " Process action, then return observation, reward, done, and info for env "
-
-    if action == 0: # Right
-      direction = [1, 0]
-
-    if action == 1: # Left
-      direction = [-1, 0]
-
-    if action == 2: # Up
-      direction = [0, 1]
-
-    if action == 3: # Down
-      direction = [0, -1]
-
-    # move snake by direction ie the action
-    self.snake_occupancy = self.move_snake([direction])
-
-    head_loc = self.get_snake_occupancy()[0]
-    
-    # check if the head is out of grid or on its body
-    if self.run_into_edge(head_loc) or self.run_into_self(head_loc):
-      reward = -1
-      return self.get_observation(), reward, True, {} 
-
-    # if snake has eaten apple, extend snake length and generate new apple
-    if new_head_loc == self.get_apple_location():
-
-      reward = 2 # update reward
-
-      import random 
-      new_x = random.randint(1, GRID_WIDTH)
-      new_y = random.randint(1, GRID_HEIGHT)
-
-      self.apple_location = [new_x, new_y]
+    '''
+      We want to learn that actions (directions) will not do anything if the snake 
+      is already traveling in that direction or -direction. For example, if the 
+      snake is already traveling upwards, pressing Up or Down will not do anything.
+      Only pressing Right or Left will.
+    '''
 
     
+    ########## process action ##########
+    if action == 0: # Nothing
+      new_direction = [0, 0]
+      print('Nothing')
+    if action == 1: # Right
+      new_direction = [1, 0]
+      print('Right')
+    if action == 2: # Left
+      new_direction = [-1, 0]
+      print('Left')
+    if action == 3: # Up
+      new_direction = [0, 1]
+      print('Up')
+    if action == 4: # Down
+      new_direction = [0, -1]
+      print('Down')
+
+
+    opposite_direction = np.multiply(-1, self.direction).tolist() 
+    #print('self.direction: ' + str(self.direction))
+    #print('opposite_direction: ' + str(opposite_direction))
+    #print('new_direction: ' + str(new_direction))
+
+    ########## Handle moves that dont change snake direction ##########
+    if (new_direction == self.direction) or (new_direction == opposite_direction) or (new_direction == [0, 0]):
+      print('made non affective move')
+      self.snake_occupancy = self.move_snake([self.direction])
+      
+      if self.apple_eaten() == True:
+        self.apple_location = self.generate_new_apple_loc()
+        reward = 1
+
+      else:
+        # remove last unit of tail  
+        self.snake_occupancy.pop()
+        reward = 0
+      
+      obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
+
+
+    ########## Handle moves that do change snake direction ##########
     else:
-      # remove last unit of tail  
-      self.snake_occupancy.pop()
+      self.snake_occupancy = self.move_snake([new_direction])
+      
+      if self.apple_eaten() == True:
+        self.apple_location = self.generate_new_apple_loc()
+        reward = 1
 
+      else:
+        # remove last unit of tail  
+        self.snake_occupancy.pop()
+        reward = 0
+      
+      obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
 
-    if self.check_done_status(self.direction) == True: 
-      self.done = True
-      reward = 0
-
-    # the snake made a non terminating step so reward
-    reward = 1
-    obs = self.get_observation()
     
+    # check is snake run into edge or itself 
+    head_loc = self.snake_occupancy[0]
+    # check if the head is out of grid or on its body
+    if self.run_into_edge(head_loc) or self.run_into_self(self.get_snake_occupancy()):
+      reward = -1
+      done = True
+      if self.run_into_edge(head_loc) == True:
+        print('RAN INTO EDGE with head_loc at ' + str(head_loc))
+
+      if self.run_into_self(self.get_snake_occupancy()) == True:
+        print('RAN INTO SELF')
+
+      print('RESET')
+      return self.get_observation(), reward, True, {} 
 
     return obs, reward, False, {}
 
@@ -131,12 +168,10 @@ class SnakeEnv(gym.Env):
   def reset(self):
     " Resets environment to initial configuration "
 
-    self.snake_occupancy = [[5, 4], [4, 4], [3, 4]]
+    self.snake_occupancy = [[5, 4], [4, 4], [3, 4], [2, 4], [1, 4]]
     self.apple_location = [10, 4]
-    self.direction = 0
-    obs = np.array([self.snake_occupancy,
-                    self.direction, 
-                    self.apple_location])
+    self.direction = [1, 0] # moving right
+    obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
 
     return obs
 
@@ -145,22 +180,60 @@ class SnakeEnv(gym.Env):
 
   def render(self, mode='human', close=False):
     
-    if self.viewer is None:
-      from gym.envs.classic_control import rendering
-      self.viewer = rendering.Viewer(SCREEN_HEIGHT, SCREEN_WIDTH)
+    #self.viewer.window.set_fullscreen()
+    self.viewer.window.clear()
 
-      #self.snake = rendering.Line((3., 100.), (100., 100.))
-      #self.snake.set_color(.8,.0,.8)
-      #self.viewer.add_geom(self.snake)
-      from os import path
+    # render apple
+    apple = self.viewer.draw_circle(radius=UNIT_WIDTH/5, res=10)
+    apple.set_color(1,0,0)
+    apple.transform = rendering.Transform()
+    x,y = tuple(np.multiply(UNIT_WIDTH, self.get_apple_location()))
+    apple.transform.set_translation(x,y)
+    apple.add_attr(apple.transform)
+    self.viewer.add_onetime(apple)
+    
+    # render snake  
+    snake_occ_arr = self.snake_occupancy
+    resized = [np.multiply(UNIT_WIDTH, ele) for ele in snake_occ_arr]
+    snake_occ = [tuple(point) for point in resized]
 
-      fname = path.join(path.dirname(__file__), "red_apple_logo.png")
-      self.img_apple = rendering.Image(fname, 100, 100)
-      self.viewer.add_onetime(self.img_apple)
+    #print('snake_head_location: ' + str(snake_occ_arr[0])) 
+    poly = self.viewer.draw_polyline(snake_occ, color=(0,1,0), linewidth=UNIT_WIDTH)
+    self.viewer.add_onetime(poly)
 
     return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
 
+  def apple_eaten(self):
+    # if snake has eaten apple, extend snake length and generate new apple
+    head_loc = self.snake_occupancy[0]
+    if head_loc == self.get_apple_location():
+      
+      print('curr apple loc: '+str(self.apple_location))
+      print('APPLE EATEN!')
+      self.apple_location = self.generate_new_apple_loc()
+      print('new apple loc: '+str(self.apple_location))
+      return True
+
+    else:
+      return False 
+
+
+
+  def generate_new_apple_loc(self):
+    " Randomly generates a new apple a [x,y] where [x,y] not where snake is"
+    import random
+
+    new_x = random.randint(1, GRID_WIDTH)
+    new_y = random.randint(1, GRID_HEIGHT)
+
+    while [new_x, new_y] in self.snake_occupancy:
+      new_x = random.randint(1, GRID_WIDTH)
+      new_y = random.randint(1, GRID_HEIGHT)
+
+    new_apple_loc = [new_x, new_y]  
+
+    return new_apple_loc
 
 
   def get_observation(self):
@@ -172,11 +245,9 @@ class SnakeEnv(gym.Env):
     snake_occ = self.snake_occupancy
     apple_loc = self.apple_location
     direction = self.direction
-    
     obs = np.array([snake_occ, direction, apple_loc])
 
     return obs
-
 
 
   def check_done_status(self, direction):
@@ -185,7 +256,7 @@ class SnakeEnv(gym.Env):
         into itself or edge based on its current direction. 
     """
 
-    return (self.run_into_edge(direction) & self.run_into_self(direction))
+    return (self.run_into_edge(direction) & self.run_into_self(self.get_snake_occupancy()))
 
 
   def move_snake(self, direction):
@@ -193,7 +264,12 @@ class SnakeEnv(gym.Env):
         Moves snake in direction 1 unit and returns the array of grid
         points the new snake occupies
     """
+
     snake_occ = self.get_snake_occupancy()
+
+    if direction == 0: # Do Nothing
+      return snake_occ
+
     head_loc = snake_occ[0] # snakes head position is first element in occupancy array
 
     new_head_loc = np.array(head_loc) + np.array(direction) # convert to np array for matrix add
@@ -219,23 +295,22 @@ class SnakeEnv(gym.Env):
     x = head_location[0]
     y = head_location[1]
 
-    return (x > GRID_WIDTH) or (y > GRID_HEIGHT)
+    return (x > WINDOW_WIDTH/UNIT_WIDTH) or (x < 1) or (y > WINDOW_HEIGHT/UNIT_HEIGHT) or (y < 1)
 
   
-  def run_into_self(self, head_location):
+  def run_into_self(self, snake_occupancy):
     " Checks if snake is running into itself. "
+    snake_occ = [tuple(point) for point in snake_occupancy] # convert to tuple for set() 
 
-    if head_location in self.get_snake_occupancy():
-      return True
-    else:
-      return False
+    return len(snake_occ) != len(set(snake_occ))
 
 
-   def close(self):
+  def close(self):
     " close pyglet viewer "
+    
     if self.viewer:
-        self.viewer.close()
-        self.viewer = None
+      self.viewer.close()
+      self.viewer = None
 
 
 
