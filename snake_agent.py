@@ -12,17 +12,22 @@ for _ in range(1):
 
 		env.render()
 		action = env.action_space.sample()
-		#action = 4
-		input('\nPress Enter')
+
+		#input('\nPress Enter')
 		#print('action: ' +str(action))
+		
+
+		#action = 1
 		observation, reward, done, info = env.step(action)
-	
+		#env.render()
 		#print('reward: ' + str(reward))
-		print('done status: '+ str(done))
+		#print('done status: '+ str(done))
 		#print('snake_occupancy: ' + str(observation[0]) +'\n')
 
 		import time
-		#time.sleep(1)
+		#time.sleep()
+	
+	env.render() # render terminating move/state
 
-	time.sleep(3)
-env.close()
+	time.sleep(10)
+#env.close()

@@ -46,7 +46,7 @@ from gym.envs.classic_control import rendering
       - location of apple: [x, y]
 
 """
-FPS = 30
+FPS = 1
 WINDOW_HEIGHT = 500 
 WINDOW_WIDTH = 500
 
@@ -106,15 +106,14 @@ class SnakeEnv(gym.Env):
       new_direction = [0, -1]
       print('Down')
 
-
     opposite_direction = np.multiply(-1, self.direction).tolist() 
     #print('self.direction: ' + str(self.direction))
     #print('opposite_direction: ' + str(opposite_direction))
-    #print('new_direction: ' + str(new_direction))
+    #print('new_direction: ' + str(new_direction)+'\n')
 
     ########## Handle moves that dont change snake direction ##########
     if (new_direction == self.direction) or (new_direction == opposite_direction) or (new_direction == [0, 0]):
-      print('made non affective move')
+
       self.snake_occupancy = self.move_snake([self.direction])
       
       if self.apple_eaten() == True:
@@ -132,7 +131,7 @@ class SnakeEnv(gym.Env):
     ########## Handle moves that do change snake direction ##########
     else:
       self.snake_occupancy = self.move_snake([new_direction])
-      
+      self.direction = new_direction
       if self.apple_eaten() == True:
         self.apple_location = self.generate_new_apple_loc()
         reward = 1
@@ -184,7 +183,7 @@ class SnakeEnv(gym.Env):
     self.viewer.window.clear()
 
     # render apple
-    apple = self.viewer.draw_circle(radius=UNIT_WIDTH/5, res=10)
+    apple = self.viewer.draw_circle(radius=UNIT_WIDTH/3, res=50)
     apple.set_color(1,0,0)
     apple.transform = rendering.Transform()
     x,y = tuple(np.multiply(UNIT_WIDTH, self.get_apple_location()))
@@ -197,8 +196,7 @@ class SnakeEnv(gym.Env):
     resized = [np.multiply(UNIT_WIDTH, ele) for ele in snake_occ_arr]
     snake_occ = [tuple(point) for point in resized]
 
-    #print('snake_head_location: ' + str(snake_occ_arr[0])) 
-    poly = self.viewer.draw_polyline(snake_occ, color=(0,1,0), linewidth=UNIT_WIDTH)
+    poly = self.viewer.draw_polyline(snake_occ, color=(0,1,0), linewidth=UNIT_WIDTH-1)
     self.viewer.add_onetime(poly)
 
     return self.viewer.render(return_rgb_array = mode=='rgb_array')
@@ -209,27 +207,25 @@ class SnakeEnv(gym.Env):
     head_loc = self.snake_occupancy[0]
     if head_loc == self.get_apple_location():
       
-      print('curr apple loc: '+str(self.apple_location))
       print('APPLE EATEN!')
       self.apple_location = self.generate_new_apple_loc()
-      print('new apple loc: '+str(self.apple_location))
+      #print('new apple loc: '+str(self.apple_location))
       return True
 
     else:
       return False 
 
 
-
   def generate_new_apple_loc(self):
     " Randomly generates a new apple a [x,y] where [x,y] not where snake is"
     import random
 
-    new_x = random.randint(1, GRID_WIDTH)
-    new_y = random.randint(1, GRID_HEIGHT)
+    new_x = random.randint(1, GRID_WIDTH-1)
+    new_y = random.randint(1, GRID_HEIGHT-1)
 
     while [new_x, new_y] in self.snake_occupancy:
-      new_x = random.randint(1, GRID_WIDTH)
-      new_y = random.randint(1, GRID_HEIGHT)
+      new_x = random.randint(1, GRID_WIDTH-1)
+      new_y = random.randint(1, GRID_HEIGHT-1)
 
     new_apple_loc = [new_x, new_y]  
 
@@ -295,22 +291,21 @@ class SnakeEnv(gym.Env):
     x = head_location[0]
     y = head_location[1]
 
-    return (x > WINDOW_WIDTH/UNIT_WIDTH) or (x < 1) or (y > WINDOW_HEIGHT/UNIT_HEIGHT) or (y < 1)
+    return (x > WINDOW_WIDTH/UNIT_WIDTH -1) or (x < 0) or (y > WINDOW_HEIGHT/UNIT_HEIGHT -1) or (y < 0)
 
   
   def run_into_self(self, snake_occupancy):
-    " Checks if snake is running into itself. "
+    " Checks if snake has run into itself. "
     snake_occ = [tuple(point) for point in snake_occupancy] # convert to tuple for set() 
 
     return len(snake_occ) != len(set(snake_occ))
 
 
   def close(self):
-    " close pyglet viewer "
-    
+    " close pyglet viewer. "
     if self.viewer:
-      self.viewer.close()
-      self.viewer = None
+       self.viewer.close()
+       self.viewer = None
 
 
 
