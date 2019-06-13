@@ -18,7 +18,6 @@ from gym.envs.classic_control import rendering
 
   Action space / Snake direction:
 
-      Nothing:[0,  0]    
       Up:     [0,  1]    *only if current direction is not Down
       Down:   [0, -1]    *only if current direction is not Up
       Right:  [1,  0]    *only if current direction is not Left
@@ -74,7 +73,7 @@ class SnakeEnv(gym.Env):
     self.apple_location = None #[x, y]
     self.direction = None
 
-    self.action_space = spaces.Discrete(5) 
+    self.action_space = spaces.Discrete(4) 
     self.done = False
     self.state = None
 
@@ -90,19 +89,16 @@ class SnakeEnv(gym.Env):
 
     
     ########## process action ##########
-    if action == 0: # Nothing
-      new_direction = [0, 0]
-      print('Nothing')
-    if action == 1: # Right
+    if action == 0: # Right
       new_direction = [1, 0]
       print('Right')
-    if action == 2: # Left
+    if action == 1: # Left
       new_direction = [-1, 0]
       print('Left')
-    if action == 3: # Up
+    if action == 2: # Up
       new_direction = [0, 1]
       print('Up')
-    if action == 4: # Down
+    if action == 3: # Down
       new_direction = [0, -1]
       print('Down')
 
@@ -112,7 +108,7 @@ class SnakeEnv(gym.Env):
     #print('new_direction: ' + str(new_direction)+'\n')
 
     ########## Handle moves that dont change snake direction ##########
-    if (new_direction == self.direction) or (new_direction == opposite_direction) or (new_direction == [0, 0]):
+    if (new_direction == self.direction) or (new_direction == opposite_direction):
 
       self.snake_occupancy = self.move_snake([self.direction])
       
@@ -162,12 +158,10 @@ class SnakeEnv(gym.Env):
     return obs, reward, False, {}
 
 
-
-
   def reset(self):
     " Resets environment to initial configuration "
 
-    self.snake_occupancy = [[5, 4], [4, 4], [3, 4], [2, 4], [1, 4]]
+    self.snake_occupancy = [[5, 4], [4, 4]]#, [3, 4], [2, 4], [1, 4]]
     self.apple_location = [10, 4]
     self.direction = [1, 0] # moving right
     obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
@@ -175,15 +169,13 @@ class SnakeEnv(gym.Env):
     return obs
 
 
-
-
   def render(self, mode='human', close=False):
     
-    #self.viewer.window.set_fullscreen()
+    self.viewer.window.set_fullscreen()
     self.viewer.window.clear()
 
     # render apple
-    apple = self.viewer.draw_circle(radius=UNIT_WIDTH/3, res=50)
+    apple = self.viewer.draw_circle(radius=UNIT_WIDTH/4, res=50)
     apple.set_color(1,0,0)
     apple.transform = rendering.Transform()
     x,y = tuple(np.multiply(UNIT_WIDTH, self.get_apple_location()))
@@ -196,10 +188,37 @@ class SnakeEnv(gym.Env):
     resized = [np.multiply(UNIT_WIDTH, ele) for ele in snake_occ_arr]
     snake_occ = [tuple(point) for point in resized]
 
-    poly = self.viewer.draw_polyline(snake_occ, color=(0,1,0), linewidth=UNIT_WIDTH-1)
+    poly = self.viewer.draw_polyline(snake_occ, color=(0,1,0), linewidth=UNIT_WIDTH)
     self.viewer.add_onetime(poly)
 
+    b,t,r,l = self.render_border()
+    b = [tuple(point) for point in b]
+    t = [tuple(point) for point in t]
+    r = [tuple(point) for point in r]
+    l = [tuple(point) for point in l]
+
+    b = self.viewer.draw_polyline(b, color=(0,0,0), linewidth=UNIT_WIDTH)
+    self.viewer.add_onetime(b)
+    t = self.viewer.draw_polyline(t, color=(0,0,0), linewidth=UNIT_WIDTH)
+    self.viewer.add_onetime(t)
+    r = self.viewer.draw_polyline(r, color=(0,0,0), linewidth=UNIT_WIDTH)
+    self.viewer.add_onetime(r)
+    l = self.viewer.draw_polyline(l, color=(0,0,0), linewidth=UNIT_WIDTH)
+    self.viewer.add_onetime(l)
+
+
     return self.viewer.render(return_rgb_array = mode=='rgb_array')
+
+
+  def render_border(self):
+
+    bot = [[x, 0] for x in range(0,WINDOW_WIDTH+1,UNIT_WIDTH)]
+    top = [[x,WINDOW_HEIGHT] for x in range(0,WINDOW_WIDTH+1,UNIT_WIDTH)]
+    l = [[0,y] for y in range(0,WINDOW_HEIGHT+1,UNIT_HEIGHT)]
+    r = [[WINDOW_WIDTH,y] for y in range(0,WINDOW_HEIGHT+1,UNIT_HEIGHT)]
+
+    return bot, top, r, l 
+
 
 
   def apple_eaten(self):
@@ -263,9 +282,6 @@ class SnakeEnv(gym.Env):
 
     snake_occ = self.get_snake_occupancy()
 
-    if direction == 0: # Do Nothing
-      return snake_occ
-
     head_loc = snake_occ[0] # snakes head position is first element in occupancy array
 
     new_head_loc = np.array(head_loc) + np.array(direction) # convert to np array for matrix add
@@ -291,7 +307,7 @@ class SnakeEnv(gym.Env):
     x = head_location[0]
     y = head_location[1]
 
-    return (x > WINDOW_WIDTH/UNIT_WIDTH -1) or (x < 0) or (y > WINDOW_HEIGHT/UNIT_HEIGHT -1) or (y < 0)
+    return (x > WINDOW_WIDTH/UNIT_WIDTH -1 ) or (x < 1) or (y > WINDOW_HEIGHT/UNIT_HEIGHT -1) or (y < 1)
 
   
   def run_into_self(self, snake_occupancy):

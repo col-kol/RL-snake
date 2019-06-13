@@ -15,9 +15,6 @@ for _ in range(1):
 
 		#input('\nPress Enter')
 		#print('action: ' +str(action))
-		
-
-		#action = 1
 		observation, reward, done, info = env.step(action)
 		#env.render()
 		#print('reward: ' + str(reward))
@@ -25,7 +22,7 @@ for _ in range(1):
 		#print('snake_occupancy: ' + str(observation[0]) +'\n')
 
 		import time
-		#time.sleep()
+		time.sleep(.5)
 	
 	env.render() # render terminating move/state
 
