@@ -6,7 +6,9 @@ env = gym.make('snake-v0')
 
 observation = env.reset()
 
-for _ in range(1):
+number_of_runs = 1
+
+for _ in range(number_of_runs):
 	done = False
 	while(not done):
 
@@ -22,9 +24,9 @@ for _ in range(1):
 		#print('snake_occupancy: ' + str(observation[0]) +'\n')
 
 		import time
-		time.sleep(.5)
+		time.sleep(0.5)
 	
 	env.render() # render terminating move/state
 
-	time.sleep(10)
-#env.close()
+	time.sleep(2)
+env.close()

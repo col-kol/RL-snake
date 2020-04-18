@@ -4,7 +4,6 @@ from gym.utils import seeding
 import numpy as np
 from gym.envs.classic_control import rendering
 
-
 """
   Description: 
       Classic snake game, where the goal is direct the snake's head to eat
@@ -15,29 +14,22 @@ from gym.envs.classic_control import rendering
 
   Observation: 
 
-
   Action space / Snake direction:
-
       Up:     [0,  1]    *only if current direction is not Down
       Down:   [0, -1]    *only if current direction is not Up
       Right:  [1,  0]    *only if current direction is not Left
       Left:   [-1, 0]    *only if current direction is not Right
 
-
   Reward: 
-
       Reward is 1 for not eating itself or running into edge.
       Reward is 2 for eating apple.
 
 
 	Initial state: 
-
       N x N grid, snake (head) starts at [5, 4] going right, 
       first apple is at [10, 4]
 
-
   Encoding state:
-  
       - occupancy array of snake: [[x1, y1], [x2, y2], ... [xN, yN]]
           N is the length of snake
       - direction of snake: [x, y] where x and y are in [-1, 1]
@@ -55,8 +47,6 @@ UNIT_WIDTH = 20
 # snake grid is 25 X 25 "units" 500/20 = 25
 GRID_HEIGHT = WINDOW_HEIGHT / UNIT_HEIGHT
 GRID_WIDTH = WINDOW_WIDTH / UNIT_WIDTH
-
-
 
 class SnakeEnv(gym.Env):
   metadata = {
@@ -76,7 +66,6 @@ class SnakeEnv(gym.Env):
     self.action_space = spaces.Discrete(4) 
     self.done = False
     self.state = None
-
 
   def step(self, action):
     " Process action, then return observation, reward, done, and info for env "
@@ -123,7 +112,6 @@ class SnakeEnv(gym.Env):
       
       obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
 
-
     ########## Handle moves that do change snake direction ##########
     else:
       self.snake_occupancy = self.move_snake([new_direction])
@@ -138,7 +126,6 @@ class SnakeEnv(gym.Env):
         reward = 0
       
       obs = np.array([self.snake_occupancy, self.direction, self.apple_location])
-
     
     # check is snake run into edge or itself 
     head_loc = self.snake_occupancy[0]
@@ -157,7 +144,6 @@ class SnakeEnv(gym.Env):
 
     return obs, reward, False, {}
 
-
   def reset(self):
     " Resets environment to initial configuration "
 
@@ -168,10 +154,9 @@ class SnakeEnv(gym.Env):
 
     return obs
 
-
   def render(self, mode='human', close=False):
     
-    self.viewer.window.set_fullscreen()
+    #self.viewer.window.set_fullscreen()
     self.viewer.window.clear()
 
     # render apple
@@ -206,9 +191,7 @@ class SnakeEnv(gym.Env):
     l = self.viewer.draw_polyline(l, color=(0,0,0), linewidth=UNIT_WIDTH)
     self.viewer.add_onetime(l)
 
-
     return self.viewer.render(return_rgb_array = mode=='rgb_array')
-
 
   def render_border(self):
 
@@ -218,8 +201,6 @@ class SnakeEnv(gym.Env):
     r = [[WINDOW_WIDTH,y] for y in range(0,WINDOW_HEIGHT+1,UNIT_HEIGHT)]
 
     return bot, top, r, l 
-
-
 
   def apple_eaten(self):
     # if snake has eaten apple, extend snake length and generate new apple
@@ -233,7 +214,6 @@ class SnakeEnv(gym.Env):
 
     else:
       return False 
-
 
   def generate_new_apple_loc(self):
     " Randomly generates a new apple a [x,y] where [x,y] not where snake is"
@@ -250,7 +230,6 @@ class SnakeEnv(gym.Env):
 
     return new_apple_loc
 
-
   def get_observation(self):
     """
         Returns environment observation: 
@@ -264,7 +243,6 @@ class SnakeEnv(gym.Env):
 
     return obs
 
-
   def check_done_status(self, direction):
     """ 
         Checks whether the environment should be reset if snake runs 
@@ -272,7 +250,6 @@ class SnakeEnv(gym.Env):
     """
 
     return (self.run_into_edge(direction) & self.run_into_self(self.get_snake_occupancy()))
-
 
   def move_snake(self, direction):
     """
@@ -291,16 +268,13 @@ class SnakeEnv(gym.Env):
 
     return snake_occ
 
-
   def get_snake_occupancy(self):
     " Returns array contains points occupied by snake body"
     return self.snake_occupancy
 
-
   def get_apple_location(self):
     " Returns location of apple in form [x, y]"
     return self.apple_location 
-
 
   def run_into_edge(self, head_location):
     " Checks if snake is running into the edge. "
@@ -308,7 +282,6 @@ class SnakeEnv(gym.Env):
     y = head_location[1]
 
     return (x > WINDOW_WIDTH/UNIT_WIDTH -1 ) or (x < 1) or (y > WINDOW_HEIGHT/UNIT_HEIGHT -1) or (y < 1)
-
   
   def run_into_self(self, snake_occupancy):
     " Checks if snake has run into itself. "
@@ -316,13 +289,8 @@ class SnakeEnv(gym.Env):
 
     return len(snake_occ) != len(set(snake_occ))
 
-
   def close(self):
     " close pyglet viewer. "
     if self.viewer:
        self.viewer.close()
        self.viewer = None
-
-
-
-
